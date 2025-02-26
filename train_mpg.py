@@ -15,7 +15,7 @@ url = "https://archive.ics.uci.edu/ml/machine-learning-databases/auto-mpg/auto-m
 columns = ["mpg", "cylinders", "displacement", "horsepower", "weight", "acceleration", "model_year", "origin", "car_name"]
 
 # Load dataset correctly
-df = pd.read_csv(url, sep="\\s+", names=columns, na_values="?")  
+df = pd.read_csv(url, sep="\\s+", names=columns, na_values="?")
 
 # Drop 'car_name' since it's not needed for numerical analysis
 df.drop(columns=["car_name"], inplace=True)
@@ -44,12 +44,12 @@ X_val, X_test, y_val, y_test = train_test_split(X_temp, y_temp, test_size=0.50, 
 # Print dataset shapes
 print(f"Train: {X_train.shape}, Val: {X_val.shape}, Test: {X_test.shape}")
 
-def create_deep_mlp(input_size=X_train.shape[1], hidden_units=128, num_layers=4, output_size=1):
+def create_deep_mlp(input_size=X_train.shape[1], hidden_units=128, num_layers=8, output_size=1):
     layers = []
     prev_units = input_size  # Input layer size
     
     for _ in range(num_layers - 1):  # Hidden Layers with ReLU
-        layers.append(Layer(fan_in=prev_units, fan_out=hidden_units, activation_function=Relu()))
+        layers.append(Layer(fan_in=prev_units, fan_out=hidden_units, activation_function=Relu(), dropout_rate=0.03))
         prev_units = hidden_units
 
     # Output layer with Linear activation for regression
@@ -70,7 +70,7 @@ training_losses, validation_losses = mlp.train(
     train_x=X_train, train_y=y_train,
     val_x=X_test, val_y=y_test,
     loss_func=loss_func,
-    learning_rate=0.0001, batch_size=64, epochs=70,
+    learning_rate=0.0001, batch_size=64, epochs=100,
     rmsprop=True,  # Enable RMSProp
     beta=0.9,      # RMSProp decay factor
     epsilon=1e-8   # Small constant for numerical stability
@@ -116,3 +116,33 @@ plt.title("Validation Loss Over Time")
 plt.legend()
 
 plt.show()
+
+
+
+from prettytable import PrettyTable
+
+
+# Select 10 random samples from the test set
+num_samples = 10
+indices = np.random.choice(len(X_test), num_samples, replace=False)
+sample_X = X_test[indices]
+sample_y_true = y_test[indices].flatten()
+sample_y_pred = mlp.forward(sample_X, training=False).flatten()
+
+# Compute error metrics
+absolute_errors = np.abs(sample_y_true - sample_y_pred)
+
+# Create a DataFrame with results
+results_df = pd.DataFrame({
+    "Sample Index": indices,
+    "True MPG": sample_y_true,
+    "Predicted MPG": sample_y_pred,
+    "Absolute Error": absolute_errors
+})
+
+# Save results to CSV
+results_df.to_csv("mpg_10samples.csv", index=False)
+print("Saved to 'mpg_10samples.csv'")
+
+
+
