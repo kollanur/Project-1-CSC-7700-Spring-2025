@@ -71,21 +71,21 @@ y_train = one_hot_encode(y_train)
 y_test = one_hot_encode(y_test)
 
 
-def create_deep_mlp(input_size=784, hidden_units=128, num_layers=8, output_size=10, dropout_rate=0.0):
+def create_deep_mlp(input_size=784, hidden_units=64, num_layers=8, output_size=10, dropout_rate=0.2):
     layers = []
     prev_units = input_size  # Input layer size
     
     for _ in range(num_layers - 1):
-        layers.append(Layer(fan_in=prev_units, fan_out=hidden_units, activation_function=Relu(), dropout_rate=0.0))
+        layers.append(Layer(fan_in=prev_units, fan_out=hidden_units, activation_function=Relu(), dropout_rate=0.01))
         prev_units = hidden_units
 
     # Output layer with softmax activation
-    layers.append(Layer(fan_in=prev_units, fan_out=output_size, activation_function=Softmax(), dropout_rate=0.0))
+    layers.append(Layer(fan_in=prev_units, fan_out=output_size, activation_function=Softmax()))
 
     return MultilayerPerceptron(layers)
 
 
-mlp = create_deep_mlp(hidden_units=128, num_layers=8)
+mlp = create_deep_mlp(hidden_units=64, num_layers=8)
 
 # Define loss function
 loss_func = CrossEntropy()
@@ -95,7 +95,7 @@ training_losses, validation_losses = mlp.train(
     train_x=x_train, train_y=y_train,
     val_x=x_test, val_y=y_test,
     loss_func=loss_func,
-    learning_rate=0.0001, batch_size=64, epochs=20,
+    learning_rate=0.0001, batch_size=64, epochs=25,
     rmsprop=True,  # Enable RMSProp
     beta=0.9,      # RMSProp decay factor
     epsilon=1e-8   # Small constant for numerical stability
@@ -140,3 +140,34 @@ plt.title("Validation Loss Over Time")
 plt.legend()
 
 plt.show()
+
+
+
+
+# Forward pass to get predictions
+y_pred = mlp.forward(x_test, training=False)
+y_pred_classes = np.argmax(y_pred, axis=1)
+y_true_classes = np.argmax(y_test, axis=1)
+
+# Dictionary to store one sample per class (0-9)
+selected_samples = {}
+
+for i in range(len(y_test)):
+    label = y_true_classes[i]
+    if label not in selected_samples:
+        selected_samples[label] = (x_test[i], y_pred_classes[i])
+    if len(selected_samples) == 10:
+        break
+
+fig, axes = plt.subplots(2, 5, figsize=(8, 5))
+
+for i, (label, (image, pred)) in enumerate(selected_samples.items()):
+    row, col = divmod(i, 5)
+    axes[row, col].imshow(image.reshape(28, 28), cmap="gray")
+    axes[row, col].set_title(f"True: {label}\nPred: {pred}", color="green" if label == pred else "red")
+    axes[row, col].axis("off")
+
+plt.suptitle("MNIST Classification - One Sample per Class", fontsize=14)
+plt.tight_layout()
+plt.show()
+
